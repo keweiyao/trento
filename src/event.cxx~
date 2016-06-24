@@ -141,7 +141,7 @@ void Event::compute_nuclear_thickness(
       double dysq = std::pow(y - (static_cast<double>(iy)+.5)*dxy_, 2);
       for (auto ix = ixmin; ix <= ixmax; ++ix) {
         double dxsq = std::pow(x - (static_cast<double>(ix)+.5)*dxy_, 2);
-        TX[iy][ix] += profile.thickness(dxsq + dysq)*profile.substructure(nucleon.fj(), nucleon.fi(), iy-yc, ix-xc);
+        TX[iy][ix] += profile.thickness(dxsq + dysq);//*profile.substructure(nucleon.fj(), nucleon.fi(), iy-yc, ix-xc);
       }
     }
   }

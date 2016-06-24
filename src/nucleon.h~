@@ -229,7 +229,7 @@ inline bool NucleonProfile::participate(Nucleon& A, Nucleon& B) const {
   // 2. The 1-P will be changed to 
   // exp( - Kf * exp(cross_param - 0.25*b^2/w^2))
   // Kf = sum(fA*fB*exp(-(x^2+y^2)/w^2))*dx*dy/pi/w^2
-  double Kf = field_generator.calculate_fluct_norm(A.fi(), A.fj(), B.fi(), B.fj(), dx, dy);
+  double Kf = 1.0;//field_generator.calculate_fluct_norm(A.fi(), A.fj(), B.fi(), B.fj(), dx, dy);
   auto one_minus_prob = std::exp(
       -Kf*std::exp(cross_sec_param_ - .25*distance_sqr/width_sqr_));
 

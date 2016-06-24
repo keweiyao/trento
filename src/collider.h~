@@ -45,7 +45,7 @@ class Collider {
  private:
   //>>> Weiyao
   /// For check purposes
-  int N_tried;
+  int N_tryed;
   //<<< Weiyao
 
   // Most of these are pretty self-explanatory...

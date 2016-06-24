@@ -94,7 +94,7 @@ double compute_cross_sec_param(const VarMap& var_map) {
       a, b, tol, max_iter);
 	
 	// <<< Weiyao
-	//std::cout << "Sigma_gg = " << std::exp(.5*(result.first + result.second))*(4 * math::double_constants::pi * sqr(width)) << std::endl;
+	std::cout << "Sigma_gg = " << std::exp(.5*(result.first + result.second))*(4 * math::double_constants::pi * sqr(width)) << std::endl;
     return .5*(result.first + result.second);
   }
   catch (const std::domain_error&) {
