@@ -55,7 +55,7 @@ double compute_cross_sec_param(const VarMap& var_map) {
   auto sigma_nn = var_map["cross-section"].as<double>();
   auto width = var_map["nucleon-width"].as<double>();
   auto corr_l = var_map["correlation-length"].as<double>();
-  auto proton_ivar = var_map["proton-var"].as<double>();
+  auto proton_ivar = 1.0/var_map["proton-var"].as<double>();
   // Initialize arguments for boost root finding function.
 
   // Bracket min and max.
@@ -115,7 +115,7 @@ NucleonProfile::NucleonProfile(const VarMap& var_map)
       fast_exp_(-.5*sqr(trunc_radius_widths), 0., 1000),
       fluct_dist_(gamma_param_unit_mean(var_map["fluctuation"].as<double>())),
       prefactor_(math::double_constants::one_div_two_pi/width_sqr_),
-	  field_generator(2000, 2000, 2000*var_map["grid-step"].as<double>(), 2000*var_map["grid-step"].as<double>(), var_map["proton-var"].as<double>(), var_map["correlation-length"].as<double>(), random::engine(), var_map["nucleon-width"].as<double>())
+	  field_generator(2000, 2000, 2000*var_map["grid-step"].as<double>(), 2000*var_map["grid-step"].as<double>(), 1.0/var_map["proton-var"].as<double>(), var_map["correlation-length"].as<double>(), random::engine(), var_map["nucleon-width"].as<double>())
 {
 // >>> Weiyao, generating random field sheet
 	field_generator.run();
