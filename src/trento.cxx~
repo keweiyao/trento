@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
 	("correlation-length,lc",
      po::value<double>()->value_name("FLOAT")->default_value(.3, "0.3"),
      "Proton correlation length [fm]")
-	("proton-ivar,piv",
+	("proton-ivar,v",
      po::value<double>()->value_name("FLOAT")->default_value(4., "4.0"),
      "proton local density inverse variance")
     ("cross-section,x",
