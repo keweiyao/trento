@@ -77,7 +77,8 @@ double compute_cross_sec_param(const VarMap& var_map) {
 
   // This quantity appears a couple times in the equation.
   auto c = sqr(max_impact_widths) / 4;
-  auto beta = 0.0*proton_var/(1.+width*width/corr_l/corr_l);
+  auto beta = proton_var/(1.+width*width/corr_l/corr_l);
+	beta = beta*std::exp(-5.0*beta);
   try {
 	// >>> Weiyao, modify the Eq to include proton shape flucutation
 	    
@@ -86,11 +87,11 @@ double compute_cross_sec_param(const VarMap& var_map) {
         using std::exp;
 		using std::log;
         using math::expint;
-		return c - expint(-exp(x)) + expint(-exp(x-c)) - rhs;
-        //return   c
-		//	  - expint(-1./(beta+exp(-x))) + expint(-1./(beta + exp(c-x)))
-		//	  +  exp(-1./beta) * ( expint(1./beta - 1./(beta+exp(-x))) - expint(1./beta - 1./(beta + exp(c-x)))  )
-		//      -  rhs;
+		//return c - expint(-exp(x)) + expint(-exp(x-c)) - rhs;
+        return   c
+			  - expint(-1./(beta+exp(-x))) + expint(-1./(beta + exp(c-x)))
+			  +  exp(-1./beta) * ( expint(1./beta - 1./(beta+exp(-x))) - expint(1./beta - 1./(beta + exp(c-x)))  )
+		      -  rhs;
       },
       a, b, tol, max_iter);
 	

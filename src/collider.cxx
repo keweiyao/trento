@@ -90,7 +90,7 @@ void Collider::run_events() {
     // Write event data.
     output_(n, b, event_);
   }
-  //std::cout << "Monte-Carlo cross-section = " << nevents_*1./N_tried*M_PI*bmax_*bmax_ << "[fm^2]" << std::endl;
+  std::cout << "Monte-Carlo cross-section = " << nevents_*1./N_tried*M_PI*bmax_*bmax_ << "[fm^2]" << std::endl;
 }
 
 double Collider::sample_impact_param() {
