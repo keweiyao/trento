@@ -44,6 +44,21 @@ class rft2d
 				}
 			}
 		};
+		double calculate_proton_norm(int i1, int j1) const
+		{
+			double result = 0.0;
+			int fi1, fj1;
+			for (int i = -Ncut; i<=Ncut; i++)
+			{
+				for (int j = -Ncut; j<=Ncut; j++)
+				{
+					fi1 = (i1 + i + N1)%N1;
+					fj1 = (j1 + j + N2)%N2;
+					result += proton_clip[i+Ncut][j+Ncut]*phi_x[fi1*N1+fj1][0];
+				}
+			}
+			return 1.0/result;
+		};
 		double calculate_fluct_norm(int i1, int j1, int i2, int j2, double bx, double by) const
 		{
 			double result = 0.0;
@@ -65,13 +80,13 @@ class rft2d
 		};
 		double get_field(int i, int j) const
 		{
-			int si = i%N1;
-			int sj = j%N2;
+			int si = (i+N1)%N1;
+			int sj = (j+N2)%N2;
 			return phi_x[si*N1+sj][0];
 		};
 	private:
 		// for thickness overlapping calculation
-		double ** TAB_clip;
+		double ** TAB_clip, proton_clip;
 		int const Ncut;
 		double const dxy2, dxy, width;
 		

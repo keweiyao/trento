@@ -109,6 +109,7 @@ class Nucleon {
 
   /// Whether or not this nucleon is a participant.
   bool is_participant() const;
+  double norm_;
 
  private:
   /// A Nucleus must be able to set its Nucleon positions.
@@ -117,7 +118,6 @@ class Nucleon {
   /// The NucleonProfile samples participants so must be able to set
   /// participation status.
   friend bool NucleonProfile::participate(Nucleon&, Nucleon&) const;
-
   /// Set the transverse position and reset participant status to false.
   void set_position(double x, double y);
 
@@ -229,7 +229,10 @@ inline bool NucleonProfile::participate(Nucleon& A, Nucleon& B) const {
   // 2. The 1-P will be changed to 
   // exp( - Kf * exp(cross_param - 0.25*b^2/w^2))
   // Kf = sum(fA*fB*exp(-(x^2+y^2)/w^2))*dx*dy/pi/w^2
-  double Kf = 1.0;//field_generator.calculate_fluct_norm(A.fi(), A.fj(), B.fi(), B.fj(), dx, dy);
+  double Kf = field_generator.calculate_fluct_norm(A.fi(), A.fj(), B.fi(), B.fj(), dx, dy)
+				* field_generator.calculate_proton_norm(A.fi(), A.fj())
+				* field_generator.calculate_proton_norm(B.fi(), B.fj());
+	std::cout << field_generator.calculate_proton_norm(A.fi(), A.fj()) << " " << field_generator.calculate_proton_norm(B.fi(), B.fj()) << std::endl;
   auto one_minus_prob = std::exp(
       -Kf*std::exp(cross_sec_param_ - .25*distance_sqr/width_sqr_));
 

@@ -87,6 +87,18 @@ RFT::rft2d::rft2d(int const N1_, int const N2_, double L1_, double L2_, double V
 			TAB_clip[i][j] = std::exp(-(ic*ic+jc*jc)*dxy2/width/width)*dxy2/(M_PI*width*width);
 		}
 	}
+		
+	proton_clip = new double*[Ncut*2+1];
+	for(int i=0; i< Ncut*2+1; i++)
+	{
+		proton_clip[i] = new double[Ncut*2+1];
+		for(int j=0; j< Ncut*2+1; j++)
+		{
+			ic = i - Ncut;
+			jc = j - Ncut;
+			proton_clip[i][j] = std::exp(-0.5*(ic*ic+jc*jc)*dxy2/width/width)*dxy2/(2.0*M_PI*width*width);
+		}
+	}
 }
 
 RFT::rft2d::~rft2d()

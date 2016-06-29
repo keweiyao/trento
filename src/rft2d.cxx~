@@ -70,10 +70,10 @@ RFT::rft2d::rft2d(int const N1_, int const N2_, double L1_, double L2_, double V
 	//----------------FFTW-------------------------------------
 	phi_x = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N1*N2);
 	phi_k = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N1*N2);
-	std::cout << "creating FFT plans" << std::endl;
+	//std::cout << "creating FFT plans" << std::endl;
 	plan_k2x = fftw_plan_dft_2d(N1, N2, phi_k, phi_x, FFTW_BACKWARD, FFTW_MEASURE);
 	plan_x2k = fftw_plan_dft_2d(N1, N2, phi_x, phi_k, FFTW_FORWARD, FFTW_MEASURE);
-	std::cout << "FFT plans finished" << std::endl;
+	//std::cout << "FFT plans finished" << std::endl;
 	//---------------Set up TAB clip---------------------------
 	TAB_clip = new double*[Ncut*2+1];
 	int ic, jc;
@@ -85,6 +85,19 @@ RFT::rft2d::rft2d(int const N1_, int const N2_, double L1_, double L2_, double V
 			ic = i - Ncut;
 			jc = j - Ncut;
 			TAB_clip[i][j] = std::exp(-(ic*ic+jc*jc)*dxy2/width/width)*dxy2/(M_PI*width*width);
+		}
+	}
+		
+	TAB_clip = new double*[Ncut*2+1];
+	int ic, jc;
+	for(int i=0; i< Ncut*2+1; i++)
+	{
+		TAB_clip[i] = new double[Ncut*2+1];
+		for(int j=0; j< Ncut*2+1; j++)
+		{
+			ic = i - Ncut;
+			jc = j - Ncut;
+			proton_clip[i][j] = std::exp(-0.5*(ic*ic+jc*jc)*dxy2/width/width)*dxy2/(2.0*M_PI*width*width);
 		}
 	}
 }
