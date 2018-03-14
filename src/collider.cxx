@@ -115,7 +115,7 @@ double Collider::sample_impact_param() {
 		if (AB_collide && (!collision) ) event_.clear_TAB();
 
 		// update collision flag
-        collision = AB_collide || collision;
+                collision = AB_collide || collision;
 		
 		// WK: to calculate binary collision denstiy, each collision 
 		// contribute independently its Tpp. Therefore, if one pair collide, 
