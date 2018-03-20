@@ -33,13 +33,16 @@ void write_stream(std::ostream& os, int width,
   os << setprecision(10)
      << setw(width)            << num
      << setw(15) << fixed      << impact_param
-     << setw(5)                << event.npart()
-	 << setw(8)                << event.ncoll()
-     << setw(18) << scientific << event.multiplicity()            
+     << setw(5)                << event.npart();
+  if (event.with_ncoll()) os << setw(8)                << event.ncoll();
+  os   << setw(18) << scientific << event.multiplicity()            
      << fixed;
 
   for (const auto& ecc : event.eccentricity())
-    os << setw(14)             << ecc.second;
+    os << setw(14) << ecc.second;
+
+  //for (const auto& psi : event.event_planes())
+  //  os << setw(14) << psi.second;
 
   os << '\n';
 }
@@ -62,6 +65,9 @@ void write_text_file(const fs::path& output_dir, int width,
 
     for (const auto& ecc : event.eccentricity())
       ofs << "# e" << ecc.first << "    = " << ecc.second << '\n';
+
+    for (const auto& psi : event.event_planes())
+      ofs << "# psi" << psi.first << "    = " << psi.second << '\n';
   }
 
   // Write IC profile as a block grid.  Use C++ default float format (not
@@ -165,13 +171,15 @@ void HDF5Writer::operator()(
   hdf5_add_scalar_attr(group, "Nx", grid1.shape()[1]);
   for (const auto& ecc : event.eccentricity())
     hdf5_add_scalar_attr(group, "e" + std::to_string(ecc.first), ecc.second);
+  for (const auto& psi : event.event_planes())
+    hdf5_add_scalar_attr(group, "psi" + std::to_string(psi.first), psi.second);
 }
 
 #endif  // TRENTO_HDF5
 
 }  // unnamed namespace
 
-Output::Output(const VarMap& var_map) {
+Output::Output(const VarMap& var_map){
   // Determine the required width (padding) of the event number.  For example if
   // there are 10 events, the numbers are 0-9 and so no padding is necessary.
   // However given 11 events, the numbers are 00-10 with padded 00, 01, ...

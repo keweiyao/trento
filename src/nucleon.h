@@ -81,6 +81,9 @@ class NucleonProfile {
 
   /// Thickness function prefactor = fluct/(2*pi*w^2)
   double prefactor_;
+ 
+  /// bool variable to calcualte Ncoll
+  bool with_ncoll_;
 };
 
 /// \rst
@@ -195,9 +198,10 @@ inline double NucleonProfile::norm_Tpp(double bpp_sqr) const  {
 }
 
 inline bool NucleonProfile::participate(Nucleon& A, Nucleon& B) const {
-  // If both nucleons are already participants, there's nothing to do.
-  //if (A.is_participant() && B.is_participant())
-  //  return true;
+  // If both nucleons are already participants, there's nothing to do, unless
+  // in Ncoll mode
+  if (A.is_participant() && B.is_participant() && (! with_ncoll_))
+    return true;
 
   double dx = A.x() - B.x();
   double dy = A.y() - B.y();

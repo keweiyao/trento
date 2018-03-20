@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <climits>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -128,9 +129,23 @@ int main(int argc, char* argv[]) {
     ("b-max",
      po::value<double>()->value_name("FLOAT")->default_value(-1., "auto"),
      "maximum impact parameter [fm]")
+	("npart-min",
+     po::value<int>()->value_name("INT")->default_value(0, "0"),
+     "minimum Npart cut")
+    ("npart-max",
+     po::value<int>()->value_name("INT")->default_value(
+     std::numeric_limits<int>::max(), "INT_MAX"), "maximum Npart cut")
+    ("s-min",
+     po::value<double>()->value_name("FLOAT")->default_value(0., "0"),
+     "minimum entropy cut")
+    ("s-max",
+     po::value<double>()->value_name("FLOAT")->default_value(
+     std::numeric_limits<double>::max(), "DOUBLE_MAX"), "maxmimum entropy cut")
     ("random-seed",
      po::value<int64_t>()->value_name("INT")->default_value(-1, "auto"),
-     "random seed");
+     "random seed")
+    ("ncoll,b", po::bool_switch(),
+     "calculate # of binary collision and binary collision density");
 
   OptDesc grid_opts{"grid options"};
   grid_opts.add_options()

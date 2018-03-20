@@ -52,7 +52,8 @@ Event::Event(const VarMap& var_map)
       TA_(boost::extents[nsteps_][nsteps_]),
       TB_(boost::extents[nsteps_][nsteps_]),
       TR_(boost::extents[nsteps_][nsteps_]),
-	  TAB_(boost::extents[nsteps_][nsteps_]) {
+	  TAB_(boost::extents[nsteps_][nsteps_]),
+      with_ncoll_(var_map["ncoll"].as<bool>()) {
   // Choose which version of the generalized mean to use based on the
   // configuration.  The possibilities are defined above.  See the header for
   // more information.
@@ -226,6 +227,8 @@ void Event::compute_observables() {
     double wt = 0.;  // weight
     double finish() const  // compute final eccentricity
     { return std::sqrt(re*re + im*im) / std::fmax(wt, TINY); }
+    double angle() const  // compute event plane angle
+    { return atan2(im, re); }
   } e2, e3, e4, e5;
 
   for (int iy = 0; iy < nsteps_; ++iy) {
@@ -278,20 +281,20 @@ void Event::compute_observables() {
       // cancels the r^2 weight.  This cancellation occurs for all n.
       //
       // The Event unit test verifies that the two methods agree.
-      e2.re += t * (y2 - x2);
+      e2.re += t * (x2 - y2);
       e2.im += t * 2.*xy;
       e2.wt += t * r2;
 
-      e3.re += t * (y3 - 3.*y*x2);
-      e3.im += t * (3.*x*y2 - x3);
+      e3.re += t * (x3 - 3.*x*y2);
+      e3.im += t * y*(3. - 4.*y2);
       e3.wt += t * r2*r;
 
       e4.re += t * (x4 + y4 - 6.*x2y2);
-      e4.im += t * 4.*xy*(y2 - x2);
+      e4.im += t * 4.*xy*(1. - 2.*y2);
       e4.wt += t * r4;
 
-      e5.re += t * y*(5.*x4 - 10.*x2y2 + y4);
-      e5.im += t * x*(x4 - 10.*x2y2 + 5.*y4);
+      e5.re += t * x*(x4 - 10.*x2y2 - 5.*y4);
+      e5.im += t * y*(1. - 12.*x2 + 16.*x4);
       e5.wt += t * r4*r;
     }
   }
@@ -300,6 +303,11 @@ void Event::compute_observables() {
   eccentricity_[3] = e3.finish();
   eccentricity_[4] = e4.finish();
   eccentricity_[5] = e5.finish();
+
+  psi_[2] = e2.angle()/2.;
+  psi_[3] = e3.angle()/3.;
+  psi_[4] = e4.angle()/4.;
+  psi_[5] = e5.angle()/5.;
 }
 
 }  // namespace trento

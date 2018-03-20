@@ -25,7 +25,13 @@
 
 namespace trento {
 
-NucleusPtr Nucleus::create(const std::string& species, double nucleon_dmin) {
+double correct_a(double a, double w) {
+   constexpr auto c = 0.61;  // correction coefficient
+   constexpr auto a_min = 0.01;  // min. value (prevent div. by zero, etc.)
+   return std::sqrt(std::fmax(a*a - c*c*w*w, a_min*a_min));
+}
+
+NucleusPtr Nucleus::create(const std::string& species, double nucleon_width, double nucleon_dmin) {
   // W-S params ref. in header
   // XXX: remember to add new species to the help output in main() and the readme
   if (species == "p")

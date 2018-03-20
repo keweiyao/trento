@@ -57,8 +57,17 @@ class Collider {
   /// Number of events to run.
   const int nevents_;
 
+  /// Number of trys.
+  int ntrys_;
+
   /// Minimum and maximum impact parameter.
   const double bmin_, bmax_;
+
+  /// WK: Minimum and maximum Npart.
+  const int npartmin_, npartmax_;
+
+  /// WK: Minimum and maximum total entropy (at midrapitiy).
+  const double stotmin_, stotmax_;
 
   /// Parameterizes the degree of asymmetry between the two projectiles.  Used
   /// to apportion the total impact parameter to each projectile so that the
@@ -83,6 +92,9 @@ class Collider {
 
   /// The output instance.
   Output output_;
+
+  /// Whether calculate Ncoll and nulear binary collision density
+  bool with_ncoll_;
 };
 
 }  // namespace trento

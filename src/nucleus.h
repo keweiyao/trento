@@ -58,7 +58,7 @@ class Nucleus {
   /// \return a smart pointer \c std::unique_ptr<Nucleus>
   ///
   /// \throw std::invalid_argument for unknown species
-  static NucleusPtr create(const std::string& species, double nucleon_dmin = 0);
+  static NucleusPtr create(const std::string& species, double nucleon_width, double nucleon_dmin = 0);
 
   /// Default virtual destructor for abstract base class.
   virtual ~Nucleus() = default;
