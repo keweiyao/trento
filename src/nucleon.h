@@ -33,8 +33,8 @@ class NucleonProfile {
 
   /// Randomly fluctuate the profile.  Should be called prior to evaluating the
   /// thickness function for a new nucleon.
-  void fluctuate();
-
+  double fluctuate();
+  
   /// Compute the thickness function at a (squared) distance from the profile
   /// center.
   double thickness(double distance_sqr) const;
@@ -108,7 +108,7 @@ class Nucleon {
 
   /// Whether or not this nucleon is a participant.
   bool is_participant() const;
-
+  double Gfactor;
  private:
   /// A Nucleus must be able to set its Nucleon positions.
   friend class Nucleus;
@@ -172,9 +172,11 @@ inline double NucleonProfile::max_impact() const {
   return std::sqrt(max_impact_sqr_);
 }
 
-inline void NucleonProfile::fluctuate() {
-  prefactor_ = fluct_dist_(random::engine) *
+inline double NucleonProfile::fluctuate() {
+  double Gfactor = fluct_dist_(random::engine);
+  prefactor_ = Gfactor *
      math::double_constants::one_div_two_pi / width_sqr_;
+  return Gfactor;
 }
 
 inline double NucleonProfile::thickness(double distance_sqr) const {

@@ -142,7 +142,7 @@ void Event::accumulate_TAB(Nucleon& A, Nucleon& B, NucleonProfile& profile){
 		// where the Gamma fluctuation are turned off.
 		// since this binary collision already happened, the binary collision
 		// density should be normalized to one.
-        TAB_[iy][ix] += profile.deterministic_thickness(dxsqA + dysqA)
+        TAB_[iy][ix] += A.Gfactor*B.Gfactor*profile.deterministic_thickness(dxsqA + dysqA)
 						* profile.deterministic_thickness(dxsqB + dysqB)
 						/ norm_Tpp;
       }
@@ -181,14 +181,14 @@ void Event::compute_nuclear_thickness(
     int iymax = clip(static_cast<int>((y+r)/dxy_), 0, nsteps_-1);
 
     // Prepare profile for new nucleon.
-    profile.fluctuate();
+    //profile.fluctuate();
 
     // Add profile to grid.
     for (auto iy = iymin; iy <= iymax; ++iy) {
       double dysq = std::pow(y - (static_cast<double>(iy)+.5)*dxy_, 2);
       for (auto ix = ixmin; ix <= ixmax; ++ix) {
         double dxsq = std::pow(x - (static_cast<double>(ix)+.5)*dxy_, 2);
-        TX[iy][ix] += profile.thickness(dxsq + dysq);
+        TX[iy][ix] += nucleon.Gfactor*profile.deterministic_thickness(dxsq + dysq);
       }
     }
   }

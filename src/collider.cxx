@@ -128,6 +128,13 @@ double Collider::sample_impact_param() {
     nucleusA_->sample_nucleons(asymmetry_ * b);
     nucleusB_->sample_nucleons((asymmetry_ - 1.) * b);
 
+    // set fluct in advance
+    for (auto&& A : *nucleusA_) {
+      A.Gfactor = nucleon_profile_.fluctuate();
+    }  
+    for (auto&& B : *nucleusB_) {
+      B.Gfactor = nucleon_profile_.fluctuate();
+    }
     // Check each nucleon-nucleon pair.
     for (auto&& A : *nucleusA_) {
       for (auto&& B : *nucleusB_) {
