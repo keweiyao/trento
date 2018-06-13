@@ -1,5 +1,6 @@
 // TRENTO: Reduced Thickness Event-by-event Nuclear Topology
 // Copyright 2015 Jonah E. Bernhard, J. Scott Moreland
+// TRENTO3D+TRENTO-parton: Three-dimensional extension (Weiyao Ke) of TRENTO-parton (J. Scott Moreland)
 // MIT License
 
 #include <iostream>
@@ -46,6 +47,25 @@ void print_bibtex() {
     "      primaryClass   = \"nucl-th\",\n"
     "      SLACcitation   = \"%%CITATION = ARXIV:1412.4708;%%\",\n"
     "}\n";
+    
+  std::cout <<
+	"TRENTO3D:\n"
+    "@article{Ke:2016jrd,\n"
+    "      author         = \"Ke, Weiyao and Moreland, J. Scott and Bernhard, \n"
+	"                         Jonah E. and Bass, Steffen A.\",\n"
+    "      title          = \"{Constraints on rapidity-dependent initial conditions\n"
+    "                        from charged particle pseudorapidity densities and\n"
+    "                        two-particle correlations}\",\n"
+    "      journal        = \"Phys. Rev.\",\n"
+    "      volume         = \"C96\",\n"
+    "      year           = \"2017\",\n"
+    "      number         = \"4\",\n"
+    "      pages          = \"044912\",\n"
+    "      doi            = \"10.1103/PhysRevC.96.044912\",\n"
+    "      eprint         = \"1610.08490\",\n"
+    "      archivePrefix  = \"arXiv\",\n"
+    "      primaryClass   = \"nucl-th\",\n"
+    "      SLACcitation   = \"%%CITATION = ARXIV:1610.08490;%%\"\n";
 }
 
 // TODO
@@ -122,9 +142,27 @@ int main(int argc, char* argv[]) {
     ("nucleon-min-dist,d",
      po::value<double>()->value_name("FLOAT")->default_value(0., "0"),
      "minimum nucleon-nucleon distance [fm]")
+    ("beam-energy,e",
+     po::value<double>()->value_name("FLOAT")->default_value(2760, "2760"),
+     "collision beam energy sqrt(s) [GeV], initializes cross section")
     ("cross-section,x",
      po::value<double>()->value_name("FLOAT")->default_value(6.4, "6.4"),
      "inelastic nucleon-nucleon cross section sigma_NN [fm^2]")
+    ("mean-coeff,f",
+     po::value<double>()->value_name("FLOAT")->default_value(1., "1."),
+     "rapidity mean coefficient")
+    ("std-coeff,s",
+     po::value<double>()->value_name("FLOAT")->default_value(3., "3."),
+     "rapidity std coefficient")
+    ("skew-coeff,t",
+     po::value<double>()->value_name("FLOAT")->default_value(0., "0."),
+     "rapidity skew coefficient")
+	 ("skew-type,r",
+      po::value<int>()->value_name("INT")->default_value(1, "1"),
+      "rapidity skew type: 1: relative, 2: absolute, other: no skew")
+    ("jacobian,j",
+     po::value<double>()->value_name("FLOAT")->default_value(0.8, "0.8"),
+     "<pt>/<mt> used in Jacobian")
     ("normalization,n",
      po::value<double>()->value_name("FLOAT")->default_value(1., "1"),
      "normalization factor")
@@ -138,14 +176,20 @@ int main(int argc, char* argv[]) {
      po::value<int64_t>()->value_name("INT")->default_value(-1, "auto"),
      "random seed");
 
-  OptDesc grid_opts{"grid options"};
-  grid_opts.add_options()
-    ("grid-max",
+   OptDesc grid_opts{"grid options"};
+   grid_opts.add_options()
+    ("xy-max",
      po::value<double>()->value_name("FLOAT")->default_value(10., "10.0"),
-     "xy max [fm]\n(grid extends from -max to +max)")
-    ("grid-step",
+     "xy max [fm]\n(transverse grid from -max to +max)")
+    ("xy-step",
      po::value<double>()->value_name("FLOAT")->default_value(0.2, "0.2"),
-     "step size [fm]");
+     "transverse step size [fm]")
+    ("eta-max",
+     po::value<double>()->value_name("FLOAT")->default_value(0.0, "0.0"),
+     "pseudorapidity max \n(eta grid from -max to +max)")
+    ("eta-step",
+     po::value<double>()->value_name("FLOAT")->default_value(0.5, "0.5"),
+     "pseudorapidity step size");
 
   // Make a meta-group containing all the option groups except the main
   // positional options (don't want the auto-generated usage info for those).

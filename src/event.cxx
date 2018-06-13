@@ -36,6 +36,14 @@ inline double geometric_mean(double a, double b) {
   return std::sqrt(a*b);
 }
 
+// Get beam rapidity from beam energy sqrt(s)
+double beam_rapidity(double beam_energy) {
+  // Proton mass in GeV
+  constexpr double mp = 0.938;
+  return 0.5 * (beam_energy/mp + std::sqrt(std::pow(beam_energy/mp, 2) - 4.));
+}
+
+
 }  // unnamed namespace
 
 // Determine the grid parameters like so:
@@ -47,17 +55,45 @@ inline double geometric_mean(double a, double b) {
 //      larger (by at most one step size).
 Event::Event(const VarMap& var_map)
     : norm_(var_map["normalization"].as<double>()),
-      dxy_(var_map["grid-step"].as<double>()),
-      nsteps_(std::ceil(2.*var_map["grid-max"].as<double>()/dxy_)),
+      beam_energy_(var_map["beam-energy"].as<double>()),
+      exp_ybeam_(beam_rapidity(beam_energy_)),
+      mean_coeff_(var_map["mean-coeff"].as<double>()),
+      std_coeff_(var_map["std-coeff"].as<double>()),
+      skew_coeff_(var_map["skew-coeff"].as<double>()),
+      skew_type_(var_map["skew-type"].as<int>()),
+      dxy_(var_map["xy-step"].as<double>()),
+      deta_(var_map["eta-step"].as<double>()),
+      nsteps_(std::ceil(2.*var_map["xy-max"].as<double>()/dxy_)),
+      neta_(std::ceil(2.*var_map["eta-max"].as<double>()/deta_)+1),
       xymax_(.5*nsteps_*dxy_),
+      etamax_(var_map["eta-max"].as<double>()),
+      eta2y_(var_map["jacobian"].as<double>(), etamax_, deta_),
+      cgf_(),
       TA_(boost::extents[nsteps_][nsteps_]),
       TB_(boost::extents[nsteps_][nsteps_]),
-      TR_(boost::extents[nsteps_][nsteps_]) {
+      TR_(boost::extents[nsteps_][nsteps_][1]),
+      density_(boost::extents[nsteps_][nsteps_][neta_]) {
+  // Check if the skew parameter is within the applicable range
+  // For 1: relative skew, skew_coeff_ < 10.
+  //	 2: absolute skew, skew_coeff_ < 3.
+  try {
+  	if ((skew_type_ == 1 && skew_coeff_ > 10.) || 
+	  (skew_type_ == 2 && skew_coeff_ > 3.) ){
+      auto info = std::string("Error: skew coefficent too large to be stable.\n")
+				+ std::string("Requirements: (1) relative skew, skew_coeff < 10\n")
+				+ std::string("              (2) absolute skew, skew_coeff < 3");
+      throw std::invalid_argument(info);
+	}
+  }
+  catch (const std::invalid_argument& error){
+    std::cerr << error.what() << std::endl;
+    exit(1);
+  }
+
   // Choose which version of the generalized mean to use based on the
-  // configuration.  The possibilities are defined above.  See the header for
+  // configuration. The possibilities are defined above.  See the header for
   // more information.
   auto p = var_map["reduced-thickness"].as<double>();
-
   if (std::fabs(p) < TINY) {
     compute_reduced_thickness_ = [this]() {
       compute_reduced_thickness(geometric_mean);
@@ -83,6 +119,10 @@ void Event::compute(const Nucleus& nucleusA, const Nucleus& nucleusB,
   compute_nuclear_thickness(nucleusB, nucleon_common, TB_);
   compute_reduced_thickness_();
   compute_observables();
+}
+
+bool Event::is3D() const {
+  return etamax_ > TINY;
 }
 
 namespace {
@@ -147,8 +187,28 @@ void Event::compute_reduced_thickness(GenMean gen_mean) {
 
   for (int iy = 0; iy < nsteps_; ++iy) {
     for (int ix = 0; ix < nsteps_; ++ix) {
-      auto t = norm_ * gen_mean(TA_[iy][ix], TB_[iy][ix]);
-      TR_[iy][ix] = t;
+      auto ta = TA_[iy][ix];
+      auto tb = TB_[iy][ix];
+      auto t = norm_ * gen_mean(ta, tb);
+      /// At midrapidity    
+      TR_[iy][ix][0] = t;
+      /// If operating in the 3D mode, the 3D density_ array is filled with
+      /// its value at eta=0 identical to TR_ array
+      if (is3D()) {
+        auto mean = mean_coeff_ * mean_function(ta, tb, exp_ybeam_);
+        auto std = std_coeff_ * std_function(ta, tb);
+        auto skew = skew_coeff_ * skew_function(ta, tb, skew_type_);
+        cgf_.calculate_dsdy(mean, std, skew);
+        auto mid_norm = cgf_.interp_dsdy(0.)*eta2y_.Jacobian(0.);
+        for (int ieta = 0; ieta < neta_; ++ieta) {
+          auto eta = -etamax_ + ieta*deta_;
+          auto rapidity = eta2y_.rapidity(eta);
+          auto jacobian = eta2y_.Jacobian(eta);
+          auto rapidity_dist = cgf_.interp_dsdy(rapidity);
+          density_[iy][ix][ieta] = t * rapidity_dist / mid_norm * jacobian;
+        }
+      }
+
       sum += t;
       // Center of mass grid indices.
       // No need to multiply by dxy since it would be canceled later.
@@ -176,7 +236,7 @@ void Event::compute_observables() {
 
   for (int iy = 0; iy < nsteps_; ++iy) {
     for (int ix = 0; ix < nsteps_; ++ix) {
-      const auto& t = TR_[iy][ix];
+      const auto& t = TR_[iy][ix][0];
       if (t < TINY)
         continue;
 

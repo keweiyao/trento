@@ -40,6 +40,16 @@ constexpr double max_impact_widths = 6.;
 //   mean = alpha*beta == 1  ->  beta = 1/alpha
 // Used below in NucleonProfile ctor initializer list.
 
+// Inelastic nucleon-nucleon cross section as function of beam energy sqrt(s)
+// Fit coefficients explained in the docs.
+double cross_sec_from_energy(double sqrts) {
+  auto a = 3.1253;
+  auto b = 0.1280;
+  auto c = 2.0412;
+  auto d = 1.8231;
+  return a + b * pow(std::log(sqrts) - c, d);
+}
+
 template <typename RealType> using param_type =
   typename std::gamma_distribution<RealType>::param_type;
 
@@ -77,6 +87,9 @@ double infer_parton_width(const VarMap& var_map) {
 double analytic_partonic_cross_section(const VarMap& var_map) {
   // Read parameters from the configuration.
   auto sigma_nn = var_map["cross-section"].as<double>();
+  if (sigma_nn < 0) {
+    sigma_nn = cross_sec_from_energy(var_map["beam-energy"].as<double>());
+  }
   auto width = var_map["nucleon-width"].as<double>();
   
   // TODO: automatically set from beam energy

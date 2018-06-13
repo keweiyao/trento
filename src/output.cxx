@@ -1,5 +1,6 @@
 // TRENTO: Reduced Thickness Event-by-event Nuclear Topology
 // Copyright 2015 Jonah E. Bernhard, J. Scott Moreland
+// TRENTO3D: Three-dimensional extension of TRENTO by Weiyao Ke
 // MIT License
 
 #include "output.h"
@@ -67,15 +68,19 @@ void write_text_file(const fs::path& output_dir, int width,
   // fixed-width) so that trailing zeros are omitted.  This significantly
   // increases output speed and saves disk space since many grid elements are
   // zero.
-  for (const auto& row : event.reduced_thickness_grid()) {
-    auto&& iter = row.begin();
-    // Write all row elements except the last with a space delimiter afterwards.
-    do {
-      ofs << *iter << ' ';
-    } while (++iter != --row.end());
+  bool is3d;
+  if (event.density_grid().shape()[2] == 1) is3d = false;
+  else is3d = true;
 
-    // Write the last element and a linebreak.
-    ofs << *iter << '\n';
+
+  for (const auto& slice : event.density_grid()) {
+    for (const auto& row : slice) {
+      for (const auto& item : row) {
+		 ofs << item << " ";
+	  }
+	  if (is3d) ofs << std::endl;
+    }
+	if (!is3d) ofs << std::endl;
   }
 }
 
@@ -116,11 +121,11 @@ void HDF5Writer::operator()(
   const std::string name{"event_" + std::to_string(num)};
 
   // Cache a reference to the event grid -- will need it several times.
-  const auto& grid = event.reduced_thickness_grid();
+  const auto& grid = event.density_grid();
 
   // Define HDF5 datatype and dataspace to match the grid.
-  const auto& datatype = hdf5::type<Event::Grid::element>();
-  std::array<hsize_t, Event::Grid::dimensionality> shape;
+  const auto& datatype = hdf5::type<Event::Grid3D::element>();
+  std::array<hsize_t, Event::Grid3D::dimensionality> shape;
   std::copy(grid.shape(), grid.shape() + shape.size(), shape.begin());
   auto dataspace = hdf5::make_dataspace(shape);
 
@@ -142,6 +147,8 @@ void HDF5Writer::operator()(
   hdf5_add_scalar_attr(dataset, "b", impact_param);
   hdf5_add_scalar_attr(dataset, "npart", event.npart());
   hdf5_add_scalar_attr(dataset, "mult", event.multiplicity());
+  hdf5_add_scalar_attr(dataset, "dxy", event.dxy());
+  hdf5_add_scalar_attr(dataset, "deta", event.deta());
   for (const auto& ecc : event.eccentricity())
     hdf5_add_scalar_attr(dataset, "e" + std::to_string(ecc.first), ecc.second);
 }
