@@ -21,7 +21,7 @@ find_package(Boost 1.60 REQUIRED COMPONENTS filesystem program_options system)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 message(STATUS "${Boost_INCLUDE_DIRS}, ${Boost_LIBRARIES}")
 # Find and use GSL.
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/CMake) 
+#set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/CMake) 
 FIND_PACKAGE(GSL REQUIRED)
 include_directories(${GSL_INCLUDE_DIRS} ${GSLCBLAS_INCLUDE_DIRS})
 

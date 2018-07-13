@@ -42,13 +42,19 @@ class Collider {
 
   /// Run events and output.
   void run_events();
+  double impact_parameter() const{
+	return impact_parameter_;
+  }
+  const Event & expose_event() const{
+    return event_;
+  }
 
  private:
   // Most of these are pretty self-explanatory...
 
   /// Sample a min-bias impact parameter within the set range.
   double sample_impact_param();
-
+  double impact_parameter_;
   /// Pair of nucleus projectiles.
   std::unique_ptr<Nucleus> nucleusA_, nucleusB_;
 

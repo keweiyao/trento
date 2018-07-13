@@ -102,7 +102,7 @@ class Event {
   const double& deta() const
   { return deta_; }
 
-  const std::map<int, double>& event_planes() const
+  const std::map<int, double>& participant_plane() const
   { return psi_; }
 
 
@@ -117,6 +117,9 @@ class Event {
   /// WK:
   const bool& with_ncoll() const
   { return with_ncoll_; }
+
+  const std::pair<double, double> mass_center_index() const
+{ return std::make_pair(ixcm_, iycm_); }
 
  private:
   /// Compute a nuclear thickness function (TA or TB) onto a grid for a given

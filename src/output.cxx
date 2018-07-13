@@ -42,7 +42,7 @@ void write_stream(std::ostream& os, int width,
   for (const auto& ecc : event.eccentricity())
     os << setw(14) << ecc.second;
 
-  //for (const auto& psi : event.event_planes())
+  //for (const auto& psi : event.participant_plane())
   //  os << setw(14) << psi.second;
 
   os << '\n';
@@ -67,7 +67,7 @@ void write_text_file(const fs::path& output_dir, int width,
     for (const auto& ecc : event.eccentricity())
       ofs << "# e" << ecc.first << "    = " << ecc.second << '\n';
 
-    for (const auto& psi : event.event_planes())
+    for (const auto& psi : event.participant_plane())
       ofs << "# psi" << psi.first << "    = " << psi.second << '\n';
   }
 
@@ -151,7 +151,7 @@ void HDF5Writer::operator()(
   hdf5_add_scalar_attr(group, "Nz", grid1.shape()[2]);
   for (const auto& ecc : event.eccentricity())
     hdf5_add_scalar_attr(group, "e" + std::to_string(ecc.first), ecc.second);
-  for (const auto& psi : event.event_planes())
+  for (const auto& psi : event.participant_plane())
     hdf5_add_scalar_attr(group, "psi" + std::to_string(psi.first), psi.second);
 
   ////////////////////////////////////////////////////////////////////
