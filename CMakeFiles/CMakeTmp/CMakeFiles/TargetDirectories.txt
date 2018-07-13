@@ -1,3 +1,0 @@
-/home/wk42/Research/JETSCAPE-COMP/external_packages/trento/CMakeFiles/CMakeTmp/CMakeFiles/rebuild_cache.dir
-/home/wk42/Research/JETSCAPE-COMP/external_packages/trento/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_33626.dir
-/home/wk42/Research/JETSCAPE-COMP/external_packages/trento/CMakeFiles/CMakeTmp/CMakeFiles/edit_cache.dir
