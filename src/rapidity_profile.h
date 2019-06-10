@@ -108,34 +108,151 @@ private:
   double deta;
   double center;
 
+  // caches the results of cumulant_generating::calculate_dsdy (currently, only a function of skew; std factors cancel out) for performance
+  // TODO: improve this
+  class dsdy_cache{
+  private:
+    size_t const N_;                            // size in doubles of a dsdy buffer
+    double * const scratch_dsdy_buffer_;        // dsdy buffer to be used when the computed result will not be retained in the cache
+
+    struct CacheEntry {
+      long long int skew_fixedpoint;            // truncated representation of skew, so we can verify that a hash table entry corresponds to a particular skew (since multiple skews can hash to the same key)
+      double * dsdy;                            // cached dsdy array (basically the output of the Fourier transform)
+    };
+
+    size_t const cache_size_;                   // capacity of 'cache_table_' (zero disables caching)
+    CacheEntry * const cache_table_;            // hash table of cached dsdy arrays, keyed on skew significand
+
+    // NOTE:  The following settings affect the accuracy of TRENTO output.
+    //        In testing, the caching version (with MaxFractionalBits = 40,
+    //        MaxIntegralBits = 6, SignificantBits = 17) matched the noncaching
+    //        version in all output to at least five decimal places.
+
+    static constexpr int MaxFractionalBits = 40;  // (2**40 ~ 10**12) skew is converted to a fixed-point representation with this many fractional-part bits...
+    static constexpr int MaxIntegralBits   =  6;  // (2** 6 = 64)      ...and this many whole-number-part bits
+    static constexpr int SignificantBits   = 17;  // (2**17 ~ 10** 5) only this many most-significant bits are kept, so that e.g. 1.2345 and 1.2345000001 will produce the same key
+
+    int skew_to_key(double skew, long long int & skew_fixedpoint) const {
+      if (cache_size_ == 0)
+        return -1;
+
+      // TODO: handle inf, nan
+      bool isneg = (skew < 0.);
+      if (isneg) skew = -skew;
+      if (skew >= (1LL << MaxIntegralBits)) return -1;  // dsdy won't be cached for skews that are too large
+
+      // convert 'skew' to fixed-point
+      long long int fixedpt = skew * static_cast<double>(1LL << MaxFractionalBits);
+
+      // skip leading zeroes (find the leading nonzero bit) so that we can keep only the 'SignificantBits' most-significant bits
+      long long int msb = (1LL << (MaxIntegralBits + MaxFractionalBits));
+      while (msb > fixedpt) msb >>= 1;  // guaranteed to terminate when 'msb' reaches zero, since 'fixedpt' should be non-negative
+
+      // mask off insignificant digits
+      fixedpt &= -(msb >> (SignificantBits - 1));  // e.g. for 5 significant bits: fixedpt=101010101, msb=100000000, (msb>>4)=000010000, -(msb>>4)=111110000 (two's complement) --> fixedpt&-(msb>>4)=101010000
+
+      // return truncated fixed-point representation of 'skew' significand and a suitable hash table key based on it
+      if (isneg) fixedpt = -fixedpt;
+      skew_fixedpoint = fixedpt;
+
+      return static_cast<int>(static_cast<unsigned long long int>(fixedpt) % cache_size_);
+    }
+
+  public:
+    dsdy_cache(size_t n, size_t capacity = 32771) :  // default cache size is ~64MB (sizeof(double[256]) * 32771); a prime-number capacity improves hash table utilization
+      N_(n),
+      scratch_dsdy_buffer_(new double[N_]),
+      cache_size_(capacity),
+      cache_table_(new CacheEntry[cache_size_])
+    {
+      for (size_t i = 0; i < cache_size_; i++)
+        cache_table_[i].dsdy = nullptr;
+    }
+
+    ~dsdy_cache() {
+      delete scratch_dsdy_buffer_;
+
+      for (size_t i = 0; i < cache_size_; i++)
+        if (cache_table_[i].dsdy) delete cache_table_[i].dsdy;
+
+      delete cache_table_;
+    }
+
+    // returns a pointer to a dsdy buffer, along with true if the buffer is already populated (with a cached dsdy) or false if the caller will need to populate the buffer (by recomputing dsdy)
+    bool access(double skew, double * & dsdy_buffer) {
+      // convert 'skew' to an index and check the corresponding entry in the hash table
+      long long int fixedpt;
+      int key = skew_to_key(skew, fixedpt);
+
+      if (key < 0) {
+        dsdy_buffer = scratch_dsdy_buffer_;
+        return false;  // indicate to caller that they need to populate the returned buffer (even though we can't cache their result because the skew is outside the acceptable range)
+      }
+
+      CacheEntry * pentry = cache_table_ + key;
+
+      if (pentry->dsdy != nullptr) {
+        // if this cache entry corresponds to the given skew, return the cached dsdy, otherwise return a temporary buffer for caller to use when computing dsdy
+        if (pentry->skew_fixedpoint == fixedpt) {
+          dsdy_buffer = pentry->dsdy;
+          return true;  // indicate to caller that the returned buffer is already populated
+        }
+        else {
+          dsdy_buffer = scratch_dsdy_buffer_;
+          return false;  // indicate to caller that they need to populate the returned buffer (even though we can't cache their result because the cache entry is being used for a different skew)
+        }
+      }
+
+      // populate a new cache entry and associate a new buffer for the caller to fill
+      double * pdsdy = new double[N_];
+      pentry->skew_fixedpoint = fixedpt;
+      pentry->dsdy = pdsdy;
+
+      dsdy_buffer = pdsdy;
+      return false;  // indicate to caller that they need to populate the returned buffer (which is now associated with a cache entry, so their results will be preserved)
+    }
+  };  //class dsdy_cache
+
+  dsdy_cache dsdy_cache_;
+
 public:
-  cumulant_generating(): N(256), data(new double[2*N]), dsdy(new double[2*N]){};
+  cumulant_generating() :
+    N(256),
+    data(new double[2*N]),
+    dsdy_cache_(N)
+  {};
+
+  ~cumulant_generating() {
+    delete data;
+  }
 
   /// This function set the mean, std and skew of the profile and use FFT to
   /// transform cumulant generating function at zero mean.
   void calculate_dsdy(double mean, double std, double skew){
-    double k1, k2, k3, amp, arg;
-    // adaptive eta_max = 3.33*std;
-    center = mean;
-    eta_max = std*3.33;
-    deta = 2.*eta_max/(N-1.);
-    double fftmean = eta_max/std;
-      for(size_t i=0;i<N;i++){
-          k1 = M_PI*(i-N/2.0)/eta_max*std;
-      k2 = k1*k1;
-      k3 = k2*k1;
+    if (!dsdy_cache_.access(skew, dsdy)) {
+      double k1, k2, k3, amp, arg;
+      // adaptive eta_max = 3.33*std;
+      center = mean;
+      eta_max = std*3.33;
+      deta = 2.*eta_max/(N-1.);
+      double fftmean = eta_max/std;
+        for(size_t i=0;i<N;i++){
+            k1 = M_PI*(i-N/2.0)/eta_max*std;
+        k2 = k1*k1;
+        k3 = k2*k1;
 
-          amp = std::exp(-k2/2.0);
-          arg = fftmean*k1+skew/6.0*k3*amp;
+        amp = std::exp(-k2/2.0);
+        arg = fftmean*k1+skew/6.0*k3*amp;
 
-      REAL(data,i) = amp*std::cos(arg);
-          IMAG(data,i) = amp*std::sin(arg);
+        REAL(data,i) = amp*std::cos(arg);
+        IMAG(data,i) = amp*std::sin(arg);
       }
-       gsl_fft_complex_radix2_forward(data, 1, N);
+      gsl_fft_complex_radix2_forward(data, 1, N);
 
       for(size_t i=0;i<N;i++){
-          dsdy[i] = REAL(data,i)*(2.0*static_cast<double>(i%2 == 0)-1.0);
+        dsdy[i] = REAL(data,i)*(2.0*static_cast<double>(i%2 == 0)-1.0);
       }
+    }
   }
 
   /// When interpolating the funtion, the mean is put back by simply shifting 
