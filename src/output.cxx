@@ -72,15 +72,57 @@ void write_text_file(const fs::path& output_dir, int width,
   if (event.density_grid().shape()[2] == 1) is3d = false;
   else is3d = true;
 
+  int gridheight = event.density_grid().shape()[0];
+  int gridwidth  = event.density_grid().shape()[1];
+  int griddepth  = event.density_grid().shape()[2];
+  const double * pelem = event.density_grid().data();
 
-  for (const auto& slice : event.density_grid()) {
-    for (const auto& row : slice) {
-      for (const auto& item : row) {
-		 ofs << item << " ";
-	  }
-	  if (is3d) ofs << std::endl;
+  static char buffer[262144];
+  char * pch = buffer;
+
+  if (is3d) {
+    for (int y = 0; y < gridheight; y++) {
+      for (int x = 0; x < gridwidth; x++) {
+        for (int z = 0; z < griddepth; z++) {
+          if ((buffer + sizeof(buffer) - pch) < 32) {
+            *pch = '\0';
+            ofs << buffer;
+            pch = buffer;
+          }
+
+          if (z > 0) *(pch++) = ' ';
+          pch += sprintf(pch, "%.10lg", *(pelem++));
+        }
+
+        *(pch++) = '\n';
+      }
     }
-	if (!is3d) ofs << std::endl;
+
+    if (pch != buffer) {
+      *pch = '\0';
+      ofs << buffer;
+    }
+  }
+  else {
+    for (int y = 0; y < gridheight; y++) {
+      for (int x = 0; x < gridwidth; x++) {
+        if ((buffer + sizeof(buffer) - pch) < 32) {
+          *pch = '\0';
+          ofs << buffer;
+          pch = buffer;
+        }
+
+        if (x > 0) *(pch++) = ' ';
+        pch += sprintf(pch, "%.10lg", *(pelem++));
+      }
+
+      *(pch++) = '\n';
+    }
+
+    if (pch != buffer) {
+      *pch = '\0';
+      ofs << buffer;
+    }
   }
 }
 
