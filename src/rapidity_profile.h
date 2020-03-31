@@ -242,7 +242,7 @@ public:
         k3 = k2*k1;
 
         amp = std::exp(-k2/2.0);
-        arg = fftmean*k1+skew/6.0*k3*amp;
+        arg = fftmean*k1-skew/6.0*k3*amp;
 
         REAL(data,i) = amp*std::cos(arg);
         IMAG(data,i) = amp*std::sin(arg);
