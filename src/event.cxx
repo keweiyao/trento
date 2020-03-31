@@ -199,12 +199,12 @@ void Event::compute_reduced_thickness(GenMean gen_mean) {
         auto std = std_coeff_ * std_function(ta, tb);
         auto skew = skew_coeff_ * skew_function(ta, tb, skew_type_);
         cgf_.calculate_dsdy(mean, std, skew);
-        auto mid_norm = cgf_.interp_dsdy(0.)*eta2y_.Jacobian(0.);
+        auto mid_norm = cgf_.interp_dsdy(mean, 0.)*eta2y_.Jacobian(0.);
         for (int ieta = 0; ieta < neta_; ++ieta) {
           auto eta = -etamax_ + ieta*deta_;
           auto rapidity = eta2y_.rapidity(eta);
           auto jacobian = eta2y_.Jacobian(eta);
-          auto rapidity_dist = cgf_.interp_dsdy(rapidity);
+          auto rapidity_dist = cgf_.interp_dsdy(mean, rapidity);
           density_[iy][ix][ieta] = t * rapidity_dist / mid_norm * jacobian;
         }
       }
