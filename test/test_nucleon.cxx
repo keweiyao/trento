@@ -25,11 +25,12 @@ TEST_CASE( "nucleon" ) {
   auto wsq = width*width;
 
   auto var_map = make_var_map({
+      {"ncoll", false},
       {"fluctuation",   fluct},
       {"cross-section", xsec},
       {"nucleon-width", width},
-      {"parton-width", width},
-      {"parton-number", 1}
+      {"constit-width", width},
+      {"constit-number", 1},
   });
 
   NucleonCommon nc{var_map};
@@ -56,7 +57,7 @@ TEST_CASE( "nucleon" ) {
   auto x = R * random::canonical<>();
   auto y = R * random::canonical<>();
   auto dsq = x*x + y*y;
-  CHECK( nc.thickness(nucleon, x, y) == Approx(tzero*std::exp(-.5*dsq/wsq)) );
+  CHECK( nc.thickness(nucleon, x, y) == Approx(tzero*std::exp(-.5*dsq/wsq)).epsilon(1e-5).margin(1e-5) );
 
   // random point outside radius
   auto d = R * (1 + random::canonical<>());
@@ -74,7 +75,7 @@ TEST_CASE( "nucleon" ) {
   }
 
   auto mean = total/n;
-  CHECK( mean == Approx(1.).epsilon(.002) );
+  CHECK( mean == Approx(1.).epsilon(.003) );
 
   // must use a Nucleus to set Nucleon position
   // Proton conveniently sets a deterministic position
@@ -126,11 +127,12 @@ TEST_CASE( "nucleon" ) {
 
   // very large fluctuation parameters mean no fluctuations
   auto no_fluct_var_map = make_var_map({
+      {"ncoll", false},
       {"fluctuation",   1e12},
       {"cross-section", xsec},
       {"nucleon-width", width},
-      {"parton-width", width},
-      {"parton-number", 1}
+      {"constit-width", width},
+      {"constit-number", 1},
   });
 
   NucleonCommon no_fluct_nc{no_fluct_var_map};
@@ -143,87 +145,83 @@ TEST_CASE( "nucleon" ) {
   CHECK_THROWS_AS([]() {
     // nucleon width too small
     auto bad_var_map = make_var_map({
+        {"ncoll", false},
         {"fluctuation",   1.},
         {"cross-section", 5.},
         {"nucleon-width", .1},
-        {"parton-width", .1},
-        {"parton-number", 1},
+        {"constit-width", .1},
+        {"constit-number", 1},
     });
     NucleonCommon bad_profile{bad_var_map};
   }(),
   std::domain_error);
 
-  // test nucleon-nucleon cross section with random partonic substructure
-  auto npartons = std::uniform_int_distribution<>{1, 10}(random::engine);
-  auto parton_width = .3 + .2*random::canonical<>();
-  auto nucleon_width = parton_width * (1. + .5*random::canonical<>());
-  auto nucleon_width_sq = pow(nucleon_width, 2);
+  // test nucleon-nucleon cross section with random constituent substructure
+  auto nucleon_width = 0.5;
+  auto constituent_number = std::uniform_int_distribution<>{2, 6}(random::engine);
+  auto constituent_width = .3 + .2*random::canonical<>();
 
   // Coarse-ish p+p grid.
   auto grid_max = 3.;
   auto grid_step = 0.1;
   auto grid_nsteps = 60;
-  auto dxdy = std::pow(2*grid_max/grid_nsteps, 2);
 
-  // partonic var map
+  // constituent var map
   var_map = make_var_map({
+      {"ncoll", false},
       {"grid-max", grid_max},
       {"grid-step", grid_step},
       {"fluctuation",   1e12},
       {"cross-section", xsec},
       {"nucleon-width", nucleon_width},
-      {"parton-width", parton_width},
-      {"parton-number", npartons}
+      {"constit-width", constituent_width},
+      {"constit-number", constituent_number},
   });
 
-  NucleonCommon nc_partonic{var_map};
+  NucleonCommon nc_constituent{var_map};
+  bmax = nc_constituent.max_impact();
 
   // inelastic collision counter
-  auto ncoll = 0;
+  count = 0;
 
   // measure the cross section with min bias p+p collisions
   for (auto i = 0; i < static_cast<int>(nev); ++i) {
     b = bmax * std::sqrt(random::canonical<>());
     A.sample_nucleons(.5*b);
     B.sample_nucleons(-.5*b);
-    if (nc_partonic.participate(*A.begin(), *B.begin()))
-      ++ncoll;
+    if (nc_constituent.participate(*A.begin(), *B.begin()))
+      ++count;
   }
 
   // calculate Monte Carlo cross section
-  auto fraction = double(ncoll)/nev;
-  auto area = math::double_constants::pi * bmax * bmax;
-  auto mc_xsec = fraction * area;
+  xsec_mc = M_PI*bmax*bmax * static_cast<double>(count)/nev;
 
   // assert a rather loose tolerance for the numerical cross section finder
-  CHECK( mc_xsec/xsec == Approx(1).epsilon(.02) );
+  CHECK( xsec_mc/xsec == Approx(1).epsilon(.02) );
 
-  // Compute TR grid the slow way -- switch the order of grid and nucleon loops.
-  boost::multi_array<double, 2> TR{boost::extents[grid_nsteps][grid_nsteps]};
+  // verify root-mean-square nucleon width for nucleons with substructure
+  double mean_square_width_num = 0.0;
+  double mean_square_width_denom = 0.0;
 
   for (auto i = 0; i < 1000; ++i) {
     A.sample_nucleons(0.);
     auto nucleon = *A.begin();
 
-    while (!nc_partonic.participate(nucleon, nucleon)) {}
+    while (!nc_constituent.participate(nucleon, nucleon)) {}
 
     for (auto iy = 0; iy < grid_nsteps; ++iy) {
       for (auto ix = 0; ix < grid_nsteps; ++ix) {
         auto x = (ix + .5) * 2 * grid_max/grid_nsteps - grid_max;
         auto y = (iy + .5) * 2 * grid_max/grid_nsteps - grid_max;
-        auto dsq = x*x + y*y;
-        auto norm = math::double_constants::one_div_two_pi / nucleon_width_sq;
-        auto nucleon_thickness = norm * std::exp(-0.5*dsq/nucleon_width_sq);
-
-        TR[iy][ix] +=
-          (nucleon_thickness - nc_partonic.thickness(nucleon, x, y)) * dxdy / nev;
+        auto thick = nc_constituent.thickness(nucleon, x, y);
+        mean_square_width_num += (x*x + y*y)*thick;
+        mean_square_width_denom += 2*thick;
       }
     }
   }
 
-  auto gaussian_error = std::accumulate(TR.origin(), TR.origin() + TR.num_elements(), 0.); 
+  auto rms_width = std::sqrt(mean_square_width_num / mean_square_width_denom);
 
-  CHECK( gaussian_error == Approx(0.).epsilon(.01) );
-
+  CHECK( rms_width == Approx(nucleon_width).epsilon(.01).margin(.01) );
 
 }
